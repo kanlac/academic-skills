@@ -85,8 +85,12 @@ def launch_chrome_process() -> dict:
     if not chrome_path:
         return {"success": False, "error": "Chrome not found on this system"}
 
+    profile_path = get_profile_path()
+    _clean_stale_locks(profile_path)
+
     chrome_args = [
         f"--remote-debugging-port={CDP_PORT}",
+        f"--user-data-dir={profile_path}",
     ]
 
     try:
