@@ -91,6 +91,7 @@ def launch_chrome_process() -> dict:
     chrome_args = [
         f"--remote-debugging-port={CDP_PORT}",
         f"--user-data-dir={profile_path}",
+        "--remote-allow-origins=*",
     ]
 
     try:
