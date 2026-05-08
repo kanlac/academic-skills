@@ -9,7 +9,6 @@
 | 客户端 | 检测方式 |
 |--------|----------|
 | Claude Code (CLI) | 有 Bash 工具、能跑 `claude --version` |
-| Claude Desktop | 无 Bash 工具，或用户明确说明 |
 | Codex CLI | 用户明确说明，或检测到 `~/.codex/` |
 
 无法判断时询问用户。
@@ -35,27 +34,6 @@ claude mcp add chrome-setup --scope user -- uv --directory <mcp-path> run agent-
 claude mcp add playwright --scope user -- npx @playwright/mcp@latest --cdp-endpoint http://127.0.0.1:9225
 ```
 
-### Claude Desktop
-
-配置文件位置：
-- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
-
-在 `mcpServers` 中添加：
-
-```json
-{
-  "chrome-setup": {
-    "command": "uv",
-    "args": ["--directory", "<mcp-path>", "run", "agent-chrome-setup"]
-  },
-  "playwright": {
-    "command": "npx",
-    "args": ["@playwright/mcp@latest", "--cdp-endpoint", "http://127.0.0.1:9225"]
-  }
-}
-```
-
 ### Codex CLI
 
 编辑 `~/.codex/config.toml`：
@@ -70,20 +48,28 @@ command = "npx"
 args = ["@playwright/mcp@latest", "--cdp-endpoint", "http://127.0.0.1:9225"]
 ```
 
-## Step 3: 安装插件（仅 Claude Code）
+## Step 3: 安装插件 / Skill
+
+### Claude Code
 
 ```bash
 claude plugin add <plugin-path>
 ```
 
-其他客户端无插件系统，跳过。
+### Codex CLI
+
+将 skills 目录复制到用户级 skill 目录：
+
+```bash
+mkdir -p ~/.agents/skills
+cp -r <plugin-path>/skills/* ~/.agents/skills/
+```
 
 ## Step 4: 重启客户端
 
 | 客户端 | 操作 |
 |--------|------|
 | Claude Code | 退出当前会话，重新启动 |
-| Claude Desktop | Cmd+Q 完全退出后重新打开 |
 | Codex | 重启会话 |
 
 告知用户重启后在新会话中说 **"帮我设置论文下载的 Chrome 环境"** 完成首次设置。
