@@ -4,7 +4,7 @@ description: |
   Use when the user asks to "download a paper", "find a paper",
   "get PDF for DOI", "下载论文", "找论文", "知网下载",
   or mentions academic paper retrieval needs.
-version: 0.3.0
+version: 0.3.1
 user-invocable: true
 allowed-tools: Bash, Read, Write, WebFetch
 ---
@@ -43,11 +43,6 @@ allowed-tools: Bash, Read, Write, WebFetch
 **`cnki_auto_download` 说明：**
 - `false`（默认）：不在知网执行下载操作，把知网论文页链接回填到结果中并注明原因
 - `true`：当机构账号有免费额度时自动下载；遇到付费页仍然停止，回填链接并标注"需付费"
-
-## 环境感知
-
-- **Claude Desktop（沙箱）:** 无 Bash，用 WebFetch 下载，MCP 工具可用
-- **Claude Code / Codex（完整 shell）:** Bash + curl + WebFetch 均可用，优先 curl
 
 ## Prerequisites
 
@@ -98,7 +93,7 @@ Tier 2/3 需要 Chrome：
 
 ### Tier 1: HTTP 直接下载
 
-无需浏览器，纯 HTTP 请求。OA 论文在这一步应全部解决。
+无需浏览器，纯 HTTP 请求。有直接 PDF URL 的 OA 论文在这一步解决。
 
 **来源（按顺序尝试）：**
 1. arXiv: `https://arxiv.org/pdf/{id}.pdf`
@@ -114,8 +109,7 @@ Tier 2/3 需要 Chrome：
 8. Sci-Hub: `https://sci-hub.se/{doi}`（检查页面中的 PDF iframe src）
 
 **下载方式：**
-- 优先 `curl -L -o "{path}" "{url}"`
-- 沙箱中用 WebFetch
+- `curl -L -o "{path}" "{url}"`
 - 保存到配置的 `download_dir`
 - 命名：`作者_短标题_年份.pdf`
 
@@ -137,7 +131,7 @@ Tier 2/3 需要 Chrome：
 
 **注意：** 必须使用 Playwright 的 `browser_click` 模拟真实用户点击。不要用 JS 注入（`fetch()`、`window.open()`）——浏览器会拦截非用户发起的操作。
 
-**Tier 2 结束后，所有 OA 论文应已下载完成。**
+**Tier 2 结束后，所有 OA 论文应已下载完成。** 部分 OA 出版商（如 MDPI）会阻止直接 HTTP 下载但允许浏览器访问，所以 Tier 1 未能下载的 OA 论文在这一步补齐。
 
 ### Tier 3: 需要登录的平台
 
