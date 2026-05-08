@@ -4,7 +4,7 @@ description: |
   Use when the user asks to "download a paper", "find a paper",
   "get PDF for DOI", "下载论文", "找论文", "知网下载",
   or mentions academic paper retrieval needs.
-version: 0.3.1
+version: 0.4.0
 user-invocable: true
 allowed-tools: Bash, Read, Write, WebFetch
 ---

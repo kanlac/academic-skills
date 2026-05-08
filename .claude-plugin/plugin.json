@@ -1,6 +1,6 @@
 {
   "name": "academic-paper",
-  "version": "0.1.0",
+  "version": "0.4.0",
   "description": "Academic paper download plugin with three-tier strategy (OA direct, publisher navigation, CNKI login)",
   "skills": "../skills",
   "mcpServers": {
