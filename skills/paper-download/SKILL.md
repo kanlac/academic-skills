@@ -67,10 +67,17 @@ Tier 2/3 需要 Chrome：
 3. 从结果中提取：标题、作者、期刊名、年份、DOI（如有）
 4. OA 判断：可通过 `source=OAJ` 筛选 OA 期刊来源；或根据期刊名判断是否为已知 OA 期刊
 
-### 英文论文 → Semantic Scholar / Google Scholar
+### 英文论文 → Google Scholar
 
-1. Semantic Scholar API: `GET https://api.semanticscholar.org/graph/v1/paper/search?query={query}&fields=title,authors,year,externalIds,isOpenAccess,openAccessPdf`
-2. 补充：Google Scholar 页面检索（需浏览器）
+Google Scholar 覆盖面最全，作为英文论文的默认搜索引擎。
+
+1. `browser_navigate` → `https://scholar.google.com`
+2. 填入关键词或标题搜索
+3. 从结果中提取：标题、作者、期刊/会议名、年份、引用数
+4. 点击论文条目获取详情页链接，从中提取 DOI
+5. OA 判断：结果右侧带 `[PDF]` 链接的为可直接获取的版本
+
+**注意：** Google Scholar 反爬较严，频繁请求可能触发验证码。控制请求频率，遇到验证码提示用户在 Agent Chrome 中手动完成。
 
 ### 结果输出
 
