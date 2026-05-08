@@ -4,7 +4,7 @@ description: |
   Use when the user asks to "download a paper", "find a paper",
   "get PDF for DOI", "下载论文", "找论文", "知网下载",
   or mentions academic paper retrieval needs.
-version: 0.4.0
+version: 0.5.0
 user-invocable: true
 allowed-tools: Bash, Read, Write, WebFetch
 ---
@@ -79,11 +79,22 @@ Google Scholar 覆盖面最全，作为英文论文的默认搜索引擎。
 
 **注意：** Google Scholar 反爬较严，频繁请求可能触发验证码。控制请求频率，遇到验证码提示用户在 Agent Chrome 中手动完成。
 
+### 元数据补全 → OpenAlex
+
+Google Scholar / 知网检索拿到标题和作者后，用 OpenAlex API 补全结构化元数据：
+
+`GET https://api.openalex.org/works?search={title}&mailto=user@example.com`
+
+OpenAlex 一次查询返回 DOI、OA 状态（`open_access.is_oa`）、OA 直链（`open_access.oa_url`）、arXiv ID（`ids.openalex`）、引用数等，无需注册，加 `mailto` 参数即可进入高速率 polite pool。用于：
+- 判断每篇论文走哪条下载路径（有 arXiv ID → Tier 1 秒下；有 oa_url → Tier 1 直链；均无 → Tier 2/3）
+- 替代 Unpaywall 和 Semantic Scholar 的 OA 查询功能
+
 ### 结果输出
 
 - **≤10 条** → 直接在回答中展示结构化列表
 - **>10 条** → 整理为 Excel（`.xlsx`），包含列：标题、作者、期刊、年份、DOI、是否OA、下载状态、下载链接/备注
 - OA 论文单独标注，优先进入下载队列
+- Excel 使用默认样式，不添加背景色
 
 ---
 
@@ -104,25 +115,31 @@ Google Scholar 覆盖面最全，作为英文论文的默认搜索引擎。
 
 **来源（按顺序尝试）：**
 1. arXiv: `https://arxiv.org/pdf/{id}.pdf`
-2. Unpaywall: `GET https://api.unpaywall.org/v2/{doi}?email=unpaywall@example.com` → `best_oa_location.url_for_pdf`
-3. Semantic Scholar: `openAccessPdf.url`（检索阶段已获取）
-4. PMC: `https://www.ncbi.nlm.nih.gov/pmc/articles/{pmcid}/pdf/`
-5. 期刊官网 URL 模式推断：
+2. OpenAlex `oa_url`（检索阶段已获取）
+3. PMC: `https://www.ncbi.nlm.nih.gov/pmc/articles/{pmcid}/pdf/`
+4. 期刊官网 URL 模式推断：
    - Springer: `https://link.springer.com/content/pdf/{doi}.pdf`
    - MDPI: `https://www.mdpi.com/{path}/pdf`
    - 中文 OA 期刊：多数使用 MagTech 系统，PDF URL 为 `downloadArticleFile.do?attachType=PDF&id={articleId}`
-6. NSSD（国家哲学社会科学文献中心）: 社科类免费全文
-7. ChinaXiv: 中国预印本平台，免费
-8. Sci-Hub: `https://sci-hub.se/{doi}`（检查页面中的 PDF iframe src）
+5. NSSD（国家哲学社会科学文献中心）: 社科类免费全文
+6. ChinaXiv: 中国预印本平台，免费
+7. Sci-Hub（按可用性轮询）：`sci-hub.st` → `sci-hub.ren` → `sci-hub.se`（检查页面中的 PDF iframe src）
+   - 2023 年后的新论文收录率很低，遇到 "not available" 应快速跳过，不要反复重试
 
 **下载方式：**
-- `curl -L -o "{path}" "{url}"`
+- 多篇论文并行下载（Tier 1 是纯网络 I/O，适合并发）
+- 使用 `curl -L -C - --retry 3 -o "{path}" "{url}"`（`-C -` 支持断点续传）
+- 超时按文件大小动态设置：先 HEAD 请求取 Content-Length，< 2MB 用 60s，≥ 2MB 用 300s
 - 保存到配置的 `download_dir`
 - 命名：`作者_短标题_年份.pdf`
 
+**文件完整性校验：**
+- 下载后检查 PDF magic bytes（文件前 4 字节为 `%PDF`），而非仅看文件大小
+- magic bytes 不匹配 → 视为下载失败，删除并重试或标记失败
+
 ### Tier 2: 浏览器导航（无需登录）
 
-需要 Chrome + Playwright MCP，但全自动无人工。
+需要 Chrome + Playwright MCP，全自动无人工。**Tier 2 保持串行**——共享 Chrome session，并行会触发反爬。
 
 **先尝试直接 PDF URL（无需浏览器）：**
 1. 解析 DOI 重定向 → 出版商 URL
@@ -170,6 +187,16 @@ Google Scholar 覆盖面最全，作为英文论文的默认搜索引擎。
 | ✗ 需机构权限 | 出版商要求机构登录 |
 | ✗ 需手动 | 遇到验证码等需人工操作 |
 | ✗ 未找到 | 所有渠道均无法获取 |
+
+---
+
+## 非 OA 论文策略
+
+不同学科的 OA 覆盖率差异很大：
+- **AI/ML/NLP**：arXiv 覆盖接近 100%，基本不需要 Sci-Hub
+- **物理/数学/统计**：arXiv 覆盖 80%+
+- **医学/临床**：arXiv < 20%，大量非 OA。可用 PubMed API（esearch + esummary）补充检索，筛掉有 PMC ID 的（已在 Tier 1 覆盖），剩下的走 Sci-Hub 或标记为需机构权限
+- **法学/人文/社科**：极少有 arXiv，多数非 OA
 
 ---
 
